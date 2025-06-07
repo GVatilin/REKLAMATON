@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "cropperjs": "^2.0.0",
+    "vue-advanced-cropper": "^2.8.9",
+    "vue-cropperjs": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/vue-cropperjs": "^4.1.0"
+  }
+}

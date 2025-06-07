@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+# readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+fastapi = {extras = ["standard"], version = "^0.115.3"}
+sqlalchemy = "^2.0.36"
+alembic = "^1.13.3"
+
+# Linters and formatters
+isort = "^5.13.2"
+pylint = "^3.2.5"
+black = "^24.4.2"
+
+# Other
+python-dotenv = "^1.0.1"
+pydantic = "^2.9.2"
+pydantic-settings = "^2.6.0"
+psycopg2-binary = "^2.9.9"
+uvicorn = "^0.32.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+asyncpg = "^0.30.0"
+bcrypt = "4.0.1"
+pyjwt = "^2.10.1"
+openai = "^1.59.8"
+pytest = "^8.3.4"
+authlib = "^1.4.1"
+itsdangerous = "^2.2.0"
+pytz = "^2025.1"
+pytest-dotenv = "^0.5.2"
+pytest-asyncio = "^0.25.3"
+aiohttp = "^3.11.14"
+boto3 = "^1.37.23"
+sqlalchemy-utils = "^0.41.2"
+configargparse = "^1.7"
+anyio = "^4.9.0"
+trio = "^0.29.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: ${POSTGRES_HOST}
+    hostname: ${POSTGRES_HOST}
+    image: postgres:latest
+    env_file:
+      - ./.env
+    ports:
+      - '${POSTGRES_PORT}:${POSTGRES_PORT}'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # volumes:
+    #   - ./postgres-data:/var/lib/postgresql/data
+    networks:
+      - network_name
+
+  backend:
+    container_name: ${BACKEND_HOST}
+    hostname: ${BACKEND_HOST}
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    ports:
+      - '8080:8080'
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/backend/app
+    networks:
+      - network_name
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${BACKEND_HOST}:8080/api/v1/health_check/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  frontend:
+    container_name: ${FRONTEND_HOST}
+    hostname: ${FRONTEND_HOST}
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    ports:
+      - '8081:8081'
+    env_file:
+      - ./.env
+    volumes:
+      - ./frontend:/frontend
+      - /frontend/node_modules
+    networks:
+      - network_name
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - network_name
+  
+networks:
+  network_name:
+
