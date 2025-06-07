@@ -9,7 +9,3 @@ export default {
   name: 'ErrorPage',
 };
 </script>
-
-<style>
-/* Добавьте стили, если нужно */
-</style>

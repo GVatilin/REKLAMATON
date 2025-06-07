@@ -7,16 +7,6 @@ const routes = [
     component: () => import('../pages/start/index.vue')
   },
   {
-    path: '/schedule',
-    name: 'Schedule Page',
-    component: () => import('../pages/schedule/ScheduleIndex.vue')
-  },
-  {
-    path: '/deadlines',
-    name: 'Deadlines Page',
-    component: () => import('../pages/deadlines/index.vue')
-  },
-  {
     path: '/login',
     name: 'Login Page',
     component: () => import('../pages/login/LoginIndex.vue'),
@@ -29,12 +19,6 @@ const routes = [
     meta: { isLogin: false }
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('../pages/login/LoginIndex.vue'),
-    meta: { isLogin: true }
-  },
-  {
     path: '/profile',
     name: 'Profile Page',
     component: () => import('../pages/profile/index.vue')
@@ -43,11 +27,6 @@ const routes = [
     path: '/settings',
     name: 'Settings Page',
     component: () => import('../pages/settings/index.vue')
-  },
-  {
-    path: '/payment',
-    name: 'Payment Page',
-    component: () => import('../pages/payment/index.vue')
   },
   {
     path: '/debug',

@@ -16,6 +16,3 @@ class Settings(DeclarativeBase):
     )
 
     user_id = Column(UUID, ForeignKey("Users.id"), index=True)
-    text_settings = Column(String, default="")
-    start_working = Column(Time, default=time(7, 0))
-    end_working = Column(Time, default=time(23, 0))

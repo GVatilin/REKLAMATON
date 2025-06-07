@@ -16,14 +16,6 @@ class PasswordUpdateForm(BaseModel):
     password: str
 
 
-class WorkingHoursForm(BaseModel):
-    start_working: time
-    end_working: time
-
-
 class SettingsDebug(BaseModel):
     id: UUID
     user_id: UUID
-    text_settings: str
-    start_working: time
-    end_working: time
