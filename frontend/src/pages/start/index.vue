@@ -1,3 +1,3 @@
-<body>
+<template>
 Старт
-</body>
+</template>

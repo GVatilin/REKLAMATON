@@ -19,24 +19,9 @@ const routes = [
     meta: { isLogin: false }
   },
   {
-    path: '/profile',
-    name: 'Profile Page',
-    component: () => import('../pages/profile/index.vue')
-  },
-  {
-    path: '/settings',
-    name: 'Settings Page',
-    component: () => import('../pages/settings/index.vue')
-  },
-  {
     path: '/debug',
     name: 'Debug',
     component: () => import('../pages/debug/index.vue')
-  },
-  {
-    path: '/auth/google/callback',
-    name: 'Google Auth',
-    component: () => import('../pages/google_redirect/index.vue')
   },
   {
     path: '/404',

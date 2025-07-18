@@ -1,25 +1,17 @@
 <template>
     <div>
-      <h1>Список задач в календаре</h1>
+      <h1>{{ title }}</h1>
       <table class="styled-table">
         <!-- Заголовки таблицы -->
         <thead>
           <tr>
-            <th>ID</th>
-            <th>User ID</th>
-            <th>Text Settings</th>
-            <th>Start Working</th>
-            <th>End Working</th>
+            <th v-for="col in columns" :key="col">{{ col }}</th>
           </tr>
         </thead>
         <!-- Тело таблицы -->
         <tbody>
-          <tr v-for="setting in settings" :key="setting.id">
-            <td>{{ setting.id }}</td>
-            <td>{{ setting.user_id }}</td>
-            <td>{{ setting.text_settings }}</td>
-            <td>{{ setting.start_working }}</td>
-            <td>{{ setting.end_working }}</td>
+          <tr v-for="row in rows" :key="row.id || JSON.stringify(row)">
+            <td v-for="col in columns" :key="col">{{ row[col] }}</td>
           </tr>
         </tbody>
       </table>
@@ -28,29 +20,46 @@
   
 <script>
 import axios from 'axios';
+
 export default {
-data() {
-    return {
-        settings: []
-    }
-},
-methods: {
-    async get_settings() {
-        const response = await axios.get(`http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/settings/get_settings_debug`);
-        this.settings = response.data;
-    }
-},
-mounted() {
-    // Загружаем пользователей при монтировании компонента
-    this.get_settings();
+  name: 'DebugTable',
+  props: {
+    endpoint: { type: String, required: true },
+    title: { type: String, default: '' }
   },
-
-name: 'SettingsComponent'  
+  data() {
+    return {
+      rows: [],
+      error: null
+    };
+  },
+  computed: {
+    columns() {
+      return this.rows.length ? Object.keys(this.rows[0]) : [];
+    }
+  },
+  methods: {
+    async fetchData() {
+      this.error = null;
+      try {
+        const response = await axios.get(this.endpoint);
+        this.rows = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.error = err.response?.statusText || err.message;
+      }
+    }
+  },
+  watch: {
+    endpoint: 'fetchData'
+  },
+  mounted() {
+    this.fetchData();
+  }
 };
-
 </script>
 
-<style>
+
+<style scoped>
 .styled-table {
   width: 100%;
   border-collapse: collapse;

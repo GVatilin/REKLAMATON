@@ -1,0 +1,12 @@
+:root {
+    --color-background: #ffffff;
+    --color-dark-text: rgb(0, 0, 0);
+    --color-bright-text: rgb(255, 255, 255);
+    --color-cavas: #B6D9FC;
+    --color-container: #15a689;
+    --color-underline-first: rgb(0, 255, 255);
+    --color-underline-second: rgb(36, 64, 243);
+    --color-red: rgb(255, 0, 0);
+    --color-grey-text: rgb(170, 170, 170);
+    --color-dark-button: #0f6c59;
+}

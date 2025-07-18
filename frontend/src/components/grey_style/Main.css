@@ -1,0 +1,260 @@
+@import "./colors.css";
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+.grey-style {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    z-index: 0;
+    
+    background: var(--color-background);
+    color: var(--color-dark-text);
+    font-family: 'Montserrat', sans-serif;
+}
+
+::placeholder {
+    color: var(--color-dark-text);
+}
+
+.grey-style .error-msg {
+    text-align: center;
+    font-size: medium;
+    text-shadow:
+        0px 0px 5px var(--color-red),
+        0px 0px 10px var(--color-red),
+        0px 0px 20px var(--color-red);
+    color: var(--color-white);
+}
+
+.grey-style button,
+.grey-style input,
+.grey-style textarea,
+.grey-style .task-text,
+.grey-style .input-wrapper p,
+.grey-style select {
+    width: 100%;
+    padding: 2%;
+    font-size: 16px;
+    border: 0;
+    box-sizing: border-box;
+    margin-top: 2%;
+    outline: none;
+    background: none;
+    position: relative;
+}
+
+.grey-style input::placeholder {
+    color: var(--color-dark-text);
+}
+
+.grey-style button {
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: 0px solid transparent;
+    background-color: var(--color-container);
+    border-color: var(--color-dark-text);
+    transition: background-color 0.5s ease, color 0.5s ease;
+    color: var(--color-bright-text);
+}
+
+.grey-style .schedule-field button {
+    background: var(--color-grey-text);
+}
+
+.grey-style button:hover {
+    background-color: var(--color-dark-button);
+}
+
+.grey-style button:active {
+    background: rgb(0, 0, 0, 0.2);
+}
+
+.grey-style .input-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.grey-style .input-wrapper::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-dark-text);
+}
+
+.grey-style .input-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-underline-first), var(--color-underline-second));
+    transition: width 0.5s ease;
+}
+
+.input-wrapper:hover::after, .input-wrapper:focus-within::after {
+    width: 100%;
+}
+
+.grey-style textarea, .task-text {
+    border-radius: 5px;
+    border: 2px solid var(--color-dark-text);
+}
+.task-text {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.edit-button,
+.delete-button,
+.return-button {
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    margin-left: auto;
+    padding-right: 5%;
+}
+
+::-webkit-scrollbar {
+    width: 0.4vw;
+    height: 0.4vw;
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--color-grey-text);
+    border-radius: 0.4vw;
+}
+::-webkit-scrollbar-thumb:hover {
+    border: 1px solid var(--color-container);
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.bottom-text {
+    padding: 1%;
+    cursor: pointer;
+    position: relative;
+    display: block;
+    width: fit-content;
+    margin: auto;
+    text-align: center;
+}
+.bottom-text::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-underline-first), var(--color-underline-second));
+    transition: all 0.5s ease;
+    transform: translateX(-50%);
+}
+.bottom-text:hover::after {
+    width: 100%;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgb(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.modal-content {
+    width: 50%;
+    min-width: min(550px, 100vw);
+    background: transparent;
+    padding: max(1%, 20px) max(2%, 20px) max(2%, 20px) max(2%, 20px);
+    border-radius: 10px;
+    box-sizing: border-box;
+    color: var(--color-bright-text);
+}
+
+.custom-select {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+.custom-select select {
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    color: var(--color-grey-text);
+}
+.custom-select::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--color-grey-text);
+    transform: translateY(-50%);
+}
+.custom-select select:focus {
+    outline: none;
+}
+.custom-select option {
+    background-color: var(--color-background);
+    border: none;
+    outline: none;
+}
+
+.app__tabs {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+.app__tab {
+  padding: 0 2.5rem;
+  cursor: pointer;
+}
+
+.app__tab:not(:first-child) {
+  border-left: 1px solid #ccc;
+}
+
+.app__tab:hover {
+  color: #3182ce;
+}
+
+.app__tab--active {
+  color: #3182ce;
+  border-bottom: 2px solid #3182ce;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.active-link {
+  color: #3182ce;
+}

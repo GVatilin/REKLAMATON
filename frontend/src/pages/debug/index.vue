@@ -5,37 +5,68 @@
 
     <!-- Кнопки для переключения -->
     <div class="button-group">
-      <button @click="activeComponent = 'users'" :class="{ active: activeComponent === 'users' }">Users</button>
-      <button @click="activeComponent = 'deadlineTasks'" :class="{ active: activeComponent === 'deadlineTasks' }">Deadline Tasks</button>
-      <button @click="activeComponent = 'settings'" :class="{ active: activeComponent === 'settings' }">Settings</button>
+      <button
+        v-for="(cfg, key) in config"
+        :key="key"
+        @click="activeComponent = key"
+        :class="{ active: activeComponent === key }"
+      >
+        {{ cfg.title }}
+      </button>
     </div>
 
     <!-- Таблица -->
     <div class="component-container">
-      <UserDebugComponent v-if="activeComponent === 'users'" />
-      <DeadlineTaskDebugComponent v-if="activeComponent === 'deadlineTasks'" />
-      <SettingsComponent v-if="activeComponent === 'settings'" />
+      <DebugTable
+        v-if="activeComponent"
+        :endpoint="config[activeComponent].endpoint"
+        :title="config[activeComponent].title"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import UserDebugComponent from './components/UserDebugComponent.vue';
-import DeadlineTaskDebugComponent from './components/DeadlineTaskComponent.vue';
-import SettingsComponent from './components/SettingsComponent.vue';
+import DebugTable from './components/DebugTable.vue';
 
 export default {
-  components: {
-    UserDebugComponent,
-    DeadlineTaskDebugComponent,
-    SettingsComponent,
-  },
+  name: 'DebugPage',
+  components: { DebugTable },
   data() {
     return {
-      activeComponent: 'users', // Начальный активный компонент
+      activeComponent: 'users',
+      config: {
+        users: {
+          title: 'Users',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/user/debug/users_table/`
+        },
+        questions: {
+          title: 'Questions',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/question/get_questions`
+        },
+        settings: {
+          title: 'Settings',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/settings/get_settings_debug`
+        },
+        answers: {
+          title: 'Answers',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/question/debug/get_answers`
+        },
+        chapters: {
+          title: 'Chapters',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/topic/get_chapters`
+        },
+        topics: {
+          title: 'Topics',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/topic/get_topics`
+        },
+        ai_questions: {
+          title: 'AIQuestions',
+          endpoint: `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/question/debug/get_ai_questions`
+        },
+      }
     };
   },
-  name: 'DebugPage',
 };
 </script>
 
