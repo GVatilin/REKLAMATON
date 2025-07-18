@@ -53,36 +53,6 @@ async def update_email(id: UUID, updated_email: str, session: AsyncSession) -> b
     return True
 
 
-async def set_text_settings(response: UserTextSettings, current_user: User, session: AsyncSession) -> bool:
-    query = select(Settings).where(Settings.user_id == current_user.id)
-    result = await session.scalar(query)
-    result.text_settings = response.text
-
-    try:
-        await session.commit()
-    except Exception as e:
-        await session.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-    
-    return True
-
-
-async def working_hours(response: WorkingHoursForm, current_user: User, session: AsyncSession) -> bool:
-    query = select(Settings).where(Settings.user_id == current_user.id)
-    result = await session.scalar(query)
-    
-    result.start_working = response.start_working
-    result.end_working = response.end_working
-
-    try:
-        await session.commit()
-    except Exception as e:
-        await session.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-    
-    return True
-
-
 async def get_settings(current_user: User, session: AsyncSession):
     query = select(Settings).where(Settings.user_id == current_user.id)
     result = await session.scalar(query)

@@ -1,4 +1,4 @@
-# Career Track Assessment
+# REKLAMATON MISISxHSE
 
 ## Содержание
 
@@ -24,9 +24,5 @@
 ## Лицензия
 
 Этот проект лицензирован под [MIT License](LICENSE).
-
-## Контакты
-
-По любым вопросам или для поддержки, пожалуйста, свяжитесь с [Сеннов Егор](https://t.me/sennov), [Галимов Денис](https://t.me/Kera032), [Подхватилин Григорий](https://t.me/grvat).
 
 

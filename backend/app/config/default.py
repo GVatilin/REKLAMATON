@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from authlib.integrations.starlette_client import OAuth
 from app.utils.s3_manager import S3Client
-from app.utils.payment_manager import PaymentAPI
 
 
 class DefaultSettings(BaseSettings):
@@ -31,8 +30,6 @@ class DefaultSettings(BaseSettings):
     AWS_ACCESS_KEY_ID: str 
     AWS_SECRET_ACCESS_KEY: str 
     AWS_BUCKET_NAME: str
-
-    CRYPTO_API_KEY: str 
 
     PWD_CONTEXT: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -99,10 +96,6 @@ class DefaultSettings(BaseSettings):
             endpoint_url='https://storage.yandexcloud.net',
             bucket_name=self.AWS_BUCKET_NAME
         )
-    
-    @property
-    def pay_client(self) -> PaymentAPI:
-      return PaymentAPI(api_key=self.CRYPTO_API_KEY)
 
 settings: DefaultSettings | None = None
 

@@ -97,32 +97,7 @@ async def get_current_user(
     return user
 
 
-async def register_user_via_google(session: AsyncSession, user_info: str):
-    user = await get_user_by_email(session, user_info.get("email"))
-    if user is None:
-        user_data = RegistrationForm(
-            email=user_info.get("email"),
-            username=user_info.get("name"),
-            password="temporary_password"
-        )
-        user_data.password = ""
-        await register_user(session, user_data)
-
-
 async def get_user_settings(current_user: User, session: AsyncSession) -> Settings:
     query = select(Settings).where(Settings.user_id == current_user.id)
     settings = await session.scalar(query)
     return settings
-
-async def add_token_to_blacklist(
-    token: Annotated[str, Depends(get_settings().OAUTH2_SCHEME)],
-    session: Annotated[AsyncSession, Depends(get_session)],
- ) -> bool:
-    blacklist_token = BlackList(token=token)
-    session.add(blacklist_token)
-    await session.flush()
-    try:
-        await session.commit()
-    except exc.IntegrityError:
-        return False
-    return True
