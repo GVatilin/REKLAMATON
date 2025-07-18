@@ -12,8 +12,6 @@ from app.database.connection import get_session
 from app.database.models import User, Settings
 from app.schemas.settings import EmailUpdateForm, PasswordUpdateForm
 from uuid import UUID
-from app.schemas import UserTextSettings
-from app.schemas.settings import WorkingHoursForm
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

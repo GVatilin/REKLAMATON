@@ -19,7 +19,6 @@ from app.utils.user import (
     create_access_token,
     get_current_user,
     register_user,
-    add_token_to_blacklist,
 )
 
 api_router = APIRouter(prefix="/user", tags=["User"])
@@ -72,22 +71,6 @@ async def login_for_access_token(
     )
     return Token(access_token=access_token, token_type="bearer")
 
-@api_router.post(
-     "/logout",
-     summary="Logout user",
-     status_code=status.HTTP_200_OK,
- )
-async def ban_user(
-    current_user: Annotated[User, Security(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_session)],
- ) -> dict:
-    success = await add_token_to_blacklist(current_user.id, session)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка при выходе из системы",
-        )
-    return {"message": "Вы успешно вышли из учетной записи"}
 
 @api_router.get(
     "/me",

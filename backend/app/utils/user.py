@@ -11,7 +11,6 @@ from app.config import DefaultSettings, get_settings
 from app.database.connection import get_session
 from app.schemas import RegistrationForm
 from app.database.models import User, Settings
-from app.database.models.user import BlackList
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return get_settings().PWD_CONTEXT.verify(plain_password, hashed_password)
@@ -20,10 +19,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     query = select(User).where(User.email == email)
     return await session.scalar(query)
-
-async def check_token_from_black_list(session: AsyncSession, token: str)-> bool:
-     query = select(BlackList).where(BlackList.token == token)
-     return (await session.scalar(query) != None)
+    
 
 async def register_user(session: AsyncSession, user_data: RegistrationForm) -> bool:
     try:
