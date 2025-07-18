@@ -5,7 +5,7 @@ import uuid
 
 
 class User(DeclarativeBase):
-    __tablename__ = "Users"
+    __tablename__ = "users"
 
     id = Column(
         UUID(as_uuid=True),

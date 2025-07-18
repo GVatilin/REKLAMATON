@@ -6,7 +6,7 @@ import uuid
 
 
 class Settings(DeclarativeBase):
-    __tablename__ = "Settings"
+    __tablename__ = "settings"
 
     id = Column(
         UUID(as_uuid=True),
@@ -15,4 +15,4 @@ class Settings(DeclarativeBase):
         unique=True,
     )
 
-    user_id = Column(UUID, ForeignKey("Users.id"), index=True)
+    user_id = Column(UUID, ForeignKey("users.id"), index=True)

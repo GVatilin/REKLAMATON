@@ -19,7 +19,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     query = select(User).where(User.email == email)
     return await session.scalar(query)
-    
+
 
 async def register_user(session: AsyncSession, user_data: RegistrationForm) -> bool:
     try:
@@ -72,12 +72,7 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if await check_token_from_black_list(session, token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]

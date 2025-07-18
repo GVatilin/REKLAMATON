@@ -51,12 +51,6 @@ async def update_email(id: UUID, updated_email: str, session: AsyncSession) -> b
     return True
 
 
-async def get_settings(current_user: User, session: AsyncSession):
-    query = select(Settings).where(Settings.user_id == current_user.id)
-    result = await session.scalar(query)
-    return result
-
-
 async def get_settings_debug(session: AsyncSession):
     query = select(Settings)
     result = await session.scalars(query)
