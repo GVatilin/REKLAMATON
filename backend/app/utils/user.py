@@ -10,7 +10,7 @@ from sqlalchemy import exc, select
 from app.config import DefaultSettings, get_settings
 from app.database.connection import get_session
 from app.schemas import RegistrationForm
-from app.database.models import User, Settings
+from app.database.models import User, Settings, Chat
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return get_settings().PWD_CONTEXT.verify(plain_password, hashed_password)
@@ -27,8 +27,8 @@ async def register_user(session: AsyncSession, user_data: RegistrationForm) -> b
         session.add(user)
         await session.flush()
 
-        settings = Settings(user_id=user.id)
-        session.add(settings)
+        main_chat = Chat(author_id=user.id, is_main=True, name="Ментор")
+        session.add(main_chat)
 
         await session.commit()
 

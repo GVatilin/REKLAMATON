@@ -17,3 +17,4 @@ class Message(DeclarativeBase):
     chat_id = Column(UUID, ForeignKey("chats.id"), index=True)
     text = Column(String)
     date = Column(DateTime)
+    is_user = Column(Boolean)

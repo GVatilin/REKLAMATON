@@ -15,5 +15,7 @@ class Chat(DeclarativeBase):
     )
     
     name = Column(String)
+    is_main = Column(Boolean)
+    
     author_id = Column(UUID, ForeignKey("users.id"), index=True)
     author = relationship("User")
