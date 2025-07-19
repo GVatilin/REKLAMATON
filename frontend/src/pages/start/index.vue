@@ -6,7 +6,7 @@
         <button class="hamburger" @click="toggleMenu">☰</button>
         <div class="tabs">
           <button :class="['tab', activeTab === 'chats' && 'active']" @click="activeTab = 'chats'">Чаты</button>
-            <button :class="['tab', activeTab === 'requests' && 'active']" @click="activeTab = 'requests'">Запросы</button>
+          <button :class="['tab', activeTab === 'requests' && 'active']" @click="activeTab = 'requests'">Запросы</button>
         </div>
       </div>
 
@@ -48,27 +48,24 @@
           </div>
 
           <!-- Кнопка подсказок только для НЕ-мейн чатов -->
-          <div v-if="selectedChat && !selectedChat.is_main" class="chat-header-actions">
-            <button
-              class="suggest-btn"
-              :disabled="suggestionsLoading"
-              @click="toggleSuggestionsPanel"
-              :title="suggestionsPanelOpen ? 'Скрыть предложения' : 'Получить предложения сообщений'"
-            >
-              <span v-if="!suggestionsLoading">
-                {{ suggestionsPanelOpen ? 'Скрыть' : 'Предложить сообщения' }}
-              </span>
-              <span v-else>Загрузка…</span>
-            </button>
-          </div>
+            <div v-if="selectedChat && !selectedChat.is_main" class="chat-header-actions">
+              <button
+                class="suggest-btn"
+                :disabled="suggestionsLoading"
+                @click="toggleSuggestionsPanel"
+                :title="suggestionsPanelOpen ? 'Скрыть предложения' : 'Получить предложения сообщений'"
+              >
+                <span v-if="!suggestionsLoading">
+                  {{ suggestionsPanelOpen ? 'Скрыть' : 'Предложить сообщения' }}
+                </span>
+                <span v-else>Загрузка…</span>
+              </button>
+            </div>
         </div>
 
         <!-- Панель предложений (справа) -->
         <transition name="slide-left">
-          <aside
-            v-if="suggestionsPanelOpen"
-            class="suggestions-panel"
-          >
+          <aside v-if="suggestionsPanelOpen" class="suggestions-panel">
             <div class="panel-header">
               <h3>Предложения</h3>
               <button class="close-x" @click="toggleSuggestionsPanel" title="Закрыть">×</button>
@@ -110,21 +107,44 @@
             class="message"
             :class="msg.is_user ? 'sent' : 'received'"
           >
-            <div class="msg-text">{{ msg.text }}</div>
+            <!-- Изображения над текстом -->
+            <div v-if="msg.images && msg.images.length" class="msg-images">
+              <img
+                v-for="(imgSrc, idx) in msg.images"
+                :key="idx"
+                :src="imgSrc"
+                alt="attachment"
+                class="msg-image"
+                @load="scrollToBottom"
+              />
+            </div>
+            <!-- Текст (только если не пустой) -->
+            <div v-if="msg.text" class="msg-text">{{ msg.text }}</div>
             <div class="msg-time">{{ formatTime(msg.created_at) }}</div>
+          </div>
+          <!-- Индикатор ожидания ответа ИИ -->
+          <div v-if="waitingAI" class="message received typing-indicator">
+            <div class="dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="msg-time">...</div>
           </div>
         </div>
 
         <div v-if="selectedChat && selectedChat.is_main === true" class="analyze-bar">
-          <button :class="['analyze-toggle', analyzeMode && 'active']"
-                  @click="toggleAnalyzeMode"
-                  :title="analyzeMode ? 'Режим анализа анкеты включён' : 'Нажмите чтобы включить режим анализа анкеты'">
+          <button
+            :class="['analyze-toggle', analyzeMode && 'active']"
+            @click="toggleAnalyzeMode"
+            :title="analyzeMode ? 'Режим анализа анкеты включён' : 'Нажмите чтобы включить режим анализа анкеты'"
+          >
             Анализ анкеты
           </button>
 
-          <button :class="['analyze-toggle', photoFeedbackMode && 'active']"
-                  @click="togglePhotoFeedbackMode"
-                  :title="photoFeedbackMode ? 'Режим отзыва о фото включён' : 'Нажмите чтобы отправить фото на отзыв'">
+          <button
+            :class="['analyze-toggle', photoFeedbackMode && 'active']"
+            @click="togglePhotoFeedbackMode"
+            :title="photoFeedbackMode ? 'Режим отзыва о фото включён' : 'Нажмите чтобы отправить фото на отзыв'"
+          >
             Отзыв о фото
           </button>
         </div>
@@ -136,24 +156,24 @@
             accept="image/*"
             class="hidden-file-input"
             @change="onImageSelected"
+            multiple
           />
-
 
           <button class="icon attach" @click="triggerFileSelect" title="Прикрепить изображение">
             📎
           </button>
 
-          <div v-if="attachedImages.length" class="thumbs">
-            <div
-              v-for="(img, idx) in attachedImages"
-              :key="img.id"
-              class="thumb"
-              :title="img.file.name"
-            >
-              <img :src="img.preview" alt="preview" />
-              <button class="remove" @click="removeImage(idx)" title="Удалить">×</button>
+            <div v-if="attachedImages.length" class="thumbs">
+              <div
+                v-for="(img, idx) in attachedImages"
+                :key="img.id"
+                class="thumb"
+                :title="img.file.name"
+              >
+                <img :src="img.preview" alt="preview" />
+                <button class="remove" @click="removeImage(idx)" title="Удалить">×</button>
+              </div>
             </div>
-          </div>
 
           <input
             type="text"
@@ -175,7 +195,6 @@
             </svg>
           </button>
         </div>
-
       </div>
       <div v-else class="no-selection">Выберите чат слева</div>
     </main>
@@ -183,7 +202,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 
 /* =====================
@@ -197,6 +216,13 @@ const loading = ref(false)
 const error = ref('')
 const newMessage = ref('')
 const messagesEl = ref(null)
+
+// Realtime related
+const pollingIntervalMs = 3500 // базовый интервал фонового опроса
+let pollingTimer = null
+let focused = true
+const waitingAI = ref(false) // показываем индикатор пока ждём ответа
+let lastMessageIds = new Map() // chat.id -> last message id (для быстрой проверки)
 
 // Fallback avatar (40x40 placeholder)
 const placeholderAvatar = './mentor.png'
@@ -213,10 +239,81 @@ const photoFeedbackMode = ref(false) // Новый режим отправки �
 // Кэш по chat.id, чтобы не перезагружать без необходимости
 const suggestionsCache = new Map()
 const fileInput = ref(null)
-const attachedImages = ref([]) 
+const attachedImages = ref([])
 
+/* =====================
+ * HELPERS: TOKEN
+ * ===================== */
+const getToken = () => {
+  const token = localStorage.getItem('chronoJWTToken')
+  if (!token) throw new Error('Token is missing. Please log in.')
+  return token
+}
+
+/* =====================
+ * REALTIME (Polling) IMPLEMENTATION
+ * ===================== */
+function startGlobalPolling() {
+  stopGlobalPolling()
+  pollingTimer = setInterval(async () => {
+    if (!selectedChat.value) return
+    try {
+      await incrementalFetch(selectedChat.value)
+    } catch (e) {
+      // игнорируем единичные ошибки
+    }
+  }, pollingIntervalMs)
+}
+
+function stopGlobalPolling() {
+  if (pollingTimer) {
+    clearInterval(pollingTimer)
+    pollingTimer = null
+  }
+}
+
+async function incrementalFetch(chat) {
+  if (!chat) return
+  const prevLastId = lastMessageIds.get(chat.id)
+  const token = getToken()
+  const { data } = await axios.get(`http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/get_messages_from_chat/${chat.id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const normalized = (data || []).map(m => ({
+    id: m.id,
+    text: m.text,
+    date: m.date,
+    created_at: m.created_at || m.date,
+    is_user: m.is_user,
+    images: m.images || m.image_urls || []
+  }))
+
+  const newLastId = normalized.at(-1)?.id
+  if (newLastId && newLastId !== prevLastId) {
+    chat.messages = normalized
+    lastMessageIds.set(chat.id, newLastId)
+    await nextTick()
+    scrollToBottom()
+    if (waitingAI.value) {
+      const last = normalized.at(-1)
+      if (last && !last.is_user) {
+        waitingAI.value = false
+      }
+    }
+  }
+}
+
+function handleVisibilityChange() {
+  focused = !document.hidden
+  if (focused) {
+    if (selectedChat.value) incrementalFetch(selectedChat.value)
+  }
+}
+
+/* =====================
+ * INSERT SUGGESTION
+ * ===================== */
 function insertSuggestion(s) {
-  // Вставим текст предложения в поле ввода (не сразу отправляем — пользователь может отредактировать)
   const txt = s.text || s.message || (typeof s === 'string' ? s : '')
   if (!txt) return
   if (newMessage.value) {
@@ -224,10 +321,7 @@ function insertSuggestion(s) {
   } else {
     newMessage.value = txt
   }
-  // Фокус на input — через nextTick если нужно
-  requestAnimationFrame(() => {
-    // Можно поймать сам input через querySelector либо ref, если заведёте ref
-  })
+  requestAnimationFrame(() => {})
 }
 
 function triggerFileSelect() {
@@ -237,7 +331,6 @@ function triggerFileSelect() {
 
 function onImageSelected(e) {
   const files = Array.from(e.target.files || [])
-  // Фильтруем только изображения
   const images = files.filter(f => f.type.startsWith('image/'))
   images.forEach(f => {
     attachedImages.value.push({
@@ -246,7 +339,6 @@ function onImageSelected(e) {
       preview: URL.createObjectURL(f),
     })
   })
-  // Сброс, чтобы одно и то же имя можно было выбрать снова
   e.target.value = ''
 }
 
@@ -258,13 +350,12 @@ function removeImage(index) {
 }
 
 function clearAttachedImages() {
-  attachedImages.value.forEach(i => i.preview && URL.revokeObjectURL(i.preview))
+  // Не отзываем blob URL немедленно, чтобы оптимистичное сообщение могло их показать
   attachedImages.value = []
 }
 
 function toggleSuggestionsPanel() {
   if (!selectedChat.value) return
-  // Если открываем – и нет кэша или кэш пустой — загрузим
   if (!suggestionsPanelOpen.value) {
     openSuggestionsFor(selectedChat.value)
   } else {
@@ -297,7 +388,6 @@ async function fetchSuggestions(chat) {
       ? data.map(item => {
           if (typeof item === 'string') return { text: item }
           if (item && typeof item === 'object') {
-            // поддерживаем варианты ключей
             return { id: item.id, text: item.text || item.message || JSON.stringify(item) }
           }
           return { text: String(item) }
@@ -312,13 +402,8 @@ async function fetchSuggestions(chat) {
   }
 }
 
-const getToken = () => {
-  const token = localStorage.getItem('chronoJWTToken')
-  if (!token) throw new Error('Token is missing. Please log in.')
-  return token
-}
 /* =====================
- * FETCH CHATS (использует модель Chat: id, name, is_main)
+ * FETCH CHATS
  * ===================== */
 async function fetchChats() {
   loading.value = true
@@ -341,7 +426,7 @@ async function fetchChats() {
 
     const main = chats.value.find(c => c.is_main)
     if (main) {
-      await openChat(main) // автоматически загрузим сообщения главного чата
+      await openChat(main)
     }
   } catch (e) {
     error.value = e?.response?.data?.message || e.message || 'Не удалось загрузить'
@@ -354,7 +439,6 @@ function sortChats() {
   chats.value.sort((a, b) => {
     if (a.is_main && !b.is_main) return -1
     if (!a.is_main && b.is_main) return 1
-    // Дополнительно можно сортировать по времени последнего сообщения:
     const at = a.messages.at(-1)?.created_at || ''
     const bt = b.messages.at(-1)?.created_at || ''
     return bt.localeCompare(at)
@@ -362,7 +446,7 @@ function sortChats() {
 }
 
 async function fetchMessages(chat) {
-  if (!chat || chat.loading_messages || chat.messages_loaded) return
+  if (!chat || chat.loading_messages) return
   chat.loading_messages = true
   try {
     const token = getToken()
@@ -375,9 +459,13 @@ async function fetchMessages(chat) {
       id: m.id,
       text: m.text,
       date: m.date,
+      created_at: m.created_at || m.date,
       is_user: m.is_user,
+      images: m.images || m.image_urls || []
     }))
     chat.messages_loaded = true
+    const last = chat.messages.at(-1)
+    if (last) lastMessageIds.set(chat.id, last.id)
     sortChats()
     await nextTick()
     scrollToBottom()
@@ -388,16 +476,11 @@ async function fetchMessages(chat) {
   }
 }
 
-// Текущий пользователь (нужно знать для from_user). Если backend возвращает id в профиле — получите его.
-const currentUserId = ref(null)
-async function fetchCurrentUserId() {
-  try {
-    const token = getToken()
-    // const { data } = await axios.get(`http://${import.meta.env.VITE_BACKEND_URL}:8080/api/v1/user/me`, { headers: { Authorization: `Bearer ${token}` } })
-    // currentUserId.value = data.id
-  } catch (e) {
-    console.warn('Не удалось получить id пользователя')
-  }
+async function openChat(chat) {
+  selectedChat.value = chat
+  suggestionsPanelOpen.value = false
+  await fetchMessages(chat)
+  incrementalFetch(chat)
 }
 
 /* =====================
@@ -412,12 +495,6 @@ const visibleChats = computed(() => {
 /* =====================
  * UI / HELPERS
  * ===================== */
-async function openChat(chat) {
-  selectedChat.value = chat
-  suggestionsPanelOpen.value = false // закрываем при смене
-  await fetchMessages(chat)
-}
-
 function lastMessage(chat) {
   return chat.messages.at(-1) || null
 }
@@ -449,19 +526,18 @@ async function sendMessage() {
   const text = newMessage.value.trim()
   const chat = selectedChat.value
   const hasImages = attachedImages.value.length > 0
-
   if (!chat) return
-  if (!text && !hasImages) return // ничего не отправлять, если пусто всё
+  if (!text && !hasImages) return
 
-  // Оптимистичное сообщение (показываем, что ушло)
   const optimistic = {
     local_id: Date.now(),
-    text: text || (hasImages ? '[Изображение]' : ''),
+    text: text || (hasImages ? '' : ''),
     created_at: new Date().toISOString(),
     is_user: true,
     pending: true,
     has_images: hasImages,
-    images_count: attachedImages.value.length
+    images_count: attachedImages.value.length,
+    images: hasImages ? attachedImages.value.map(i => i.preview) : []
   }
   chat.messages.push(optimistic)
   newMessage.value = ''
@@ -474,74 +550,68 @@ async function sendMessage() {
     let endpoint
     let payload
     let config = {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     }
 
     const mainChat = chat.is_main === true
 
-    // Валидация для режима "Отзыв о фото"
-if (photoFeedbackMode.value && !hasImages) {
-  // Помечаем оптимистичное сообщение ошибкой и выходим
-  optimistic.error = true
-  optimistic.text = 'Для "Отзыв о фото" нужно прикрепить хотя бы одно изображение.'
-  return
-}
-
-if (mainChat) {
-  if (photoFeedbackMode.value && hasImages) {
-    endpoint = `${base}/photo`
-    payload = new FormData()
-    if (text) payload.append('text', text)
-
-    attachedImages.value.forEach(({ file }) => {
-      payload.append('image', file)
-    })
-
-  } else if (hasImages) {
-    // Обычная отправка изображения(ий) в главный чат
-    endpoint = `${base}/chat_with_screenshot`
-    payload = new FormData()
-    payload.append('chat_id', chat.id)
-
-    if (text) payload.append('text', text)
-
-    if (attachedImages.value.length === 1) {
-      payload.append('image', attachedImages.value[0].file)
-    } else {
-      attachedImages.value.forEach(fObj => {
-        payload.append('images[]', fObj.file)
-      })
+    if (photoFeedbackMode.value && !hasImages) {
+      optimistic.error = true
+      optimistic.text = 'Для "Отзыв о фото" нужно прикрепить хотя бы одно изображение.'
+      return
     }
 
-    config.headers['Content-Type'] = 'multipart/form-data'
-  } else {
-    // Текстовые ветки главного чата
-    if (analyzeMode.value) {
-      endpoint = `${base}/form`
+    if (mainChat) {
+      if (photoFeedbackMode.value && hasImages) {
+        endpoint = `${base}/photo`
+        payload = new FormData()
+        if (text) payload.append('text', text)
+        attachedImages.value.forEach(({ file }) => {
+          payload.append('image', file)
+        })
+      } else if (hasImages) {
+        endpoint = `${base}/chat_with_screenshot`
+        payload = new FormData()
+        payload.append('chat_id', chat.id)
+        if (text) payload.append('text', text)
+        if (attachedImages.value.length === 1) {
+          payload.append('image', attachedImages.value[0].file)
+        } else {
+          attachedImages.value.forEach(fObj => {
+            payload.append('images[]', fObj.file)
+          })
+        }
+        config.headers['Content-Type'] = 'multipart/form-data'
+      } else {
+        if (analyzeMode.value) {
+          endpoint = `${base}/form`
+        } else {
+          endpoint = `${base}/send`
+        }
+        payload = { chat_id: chat.id, text }
+      }
     } else {
-      endpoint = `${base}/send`
+      endpoint = `${base}/send_partner`
+      payload = { chat_id: chat.id, text }
     }
-    payload = { chat_id: chat.id, text }
-  }
-} else {
-  // Неглавные чаты
-  endpoint = `${base}/send_partner`
-  payload = { chat_id: chat.id, text }
-}
 
-
-    // После отправки режима анализа не держим
     if (analyzeMode.value) analyzeMode.value = false
     if (photoFeedbackMode.value) photoFeedbackMode.value = false
 
+    waitingAI.value = mainChat
 
     const { data } = await axios.post(endpoint, payload, config)
 
     optimistic.id = data.id
     optimistic.created_at = data.created_at || optimistic.created_at
+    if (data.images && Array.isArray(data.images)) {
+      optimistic.images = data.images
+    }
     optimistic.pending = false
+    quickPollForAIReply(chat)
   } catch (e) {
     optimistic.error = true
+    waitingAI.value = false
     console.error('Не удалось отправить сообщение', e)
   } finally {
     if (hasImages) {
@@ -550,9 +620,21 @@ if (mainChat) {
   }
 }
 
+/* =====================
+ * ACTIVE WAIT LOOP
+ * ===================== */
+async function quickPollForAIReply(chat) {
+  const maxDurationMs = 20000
+  const stepMs = 1500
+  const start = performance.now()
+  while (waitingAI.value && performance.now() - start < maxDurationMs) {
+    await incrementalFetch(chat)
+    if (!waitingAI.value) break
+    await new Promise(r => setTimeout(r, stepMs))
+  }
+}
 
 function toggleAnalyzeMode() {
-  // Если включаем анализ – выключаем отзыв о фото
   if (!analyzeMode.value) {
     photoFeedbackMode.value = false
   }
@@ -560,7 +642,6 @@ function toggleAnalyzeMode() {
 }
 
 function togglePhotoFeedbackMode() {
-  // Если включаем отзыв о фото – выключаем анализ
   if (!photoFeedbackMode.value) {
     analyzeMode.value = false
   }
@@ -569,49 +650,32 @@ function togglePhotoFeedbackMode() {
 
 function retryMessage(msg) {
   if (!msg.error) return
-  // реализовать повторную отправку
+  // TODO: реализовать повторную отправку
 }
-
-/* =====================
- * PLACEHOLDER HANDLERS
- * ===================== */
-function attach() { /* Реализовать прикрепление файлов */ }
-function toggleMenu() { /* Реализовать открытие бокового меню */ }
+function attach() {}
+function toggleMenu() {}
 
 /* =====================
  * LIFECYCLE
  * ===================== */
 onMounted(async () => {
-  await fetchCurrentUserId()
   await fetchChats()
+  startGlobalPolling()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  stopGlobalPolling()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  attachedImages.value.forEach(i => i.preview && URL.revokeObjectURL(i.preview))
 })
 </script>
 
 <style scoped>
-.chat-app {
-  display: flex;
-  height: 100vh;
-  font-family: sans-serif;
-}
-.sidebar {
-  width: 300px;
-  border-right: 1px solid #ddd;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* чтобы список чатов мог скроллиться при необходимости */
-}
-.menu-bar {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  flex: 0 0 auto;
-}
-.hamburger {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
+.chat-app { display: flex; height: 100vh; font-family: sans-serif; }
+.sidebar { width: 300px; border-right: 1px solid #ddd; display: flex; flex-direction: column; min-height: 0; }
+.menu-bar { display: flex; align-items: center; padding: 10px; flex: 0 0 auto; }
+.hamburger { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
 .tabs { display: flex; margin-left: 10px; }
 .tab { flex: 1; padding: 8px; border: none; background: none; cursor: pointer; }
 .tab.active { border-bottom: 2px solid #333; }
@@ -629,306 +693,61 @@ onMounted(async () => {
 .chat-time { font-size: 0.75rem; color: #999; }
 .state-msg { padding: 20px; font-size: 0.9rem; }
 .state-msg.error { color: #c62828; }
-
-/* ---- Основная область ---- */
-.chat-window {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* важно */
-}
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* важно для внутреннего скролла */
-  height: 100%;
-}
-.chat-header {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  flex: 0 0 auto;
-  background: #fff;
-  z-index: 6; /* чтобы оставалась над сообщениями при sticky input */
-}
+.chat-window { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.chat-container { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; flex: 0 0 auto; background: #fff; z-index: 6; }
 .avatar-large { width: 50px; height: 50px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
-
-.messages {
-  flex: 1 1 auto;
-  padding: 10px;
-  overflow-y: auto; /* внутренний скролл */
-  background: #f9f9f9;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 0; /* критично */
-  scroll-behavior: smooth;
-}
+.messages { flex: 1 1 auto; padding: 10px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; gap: 8px; min-height: 0; scroll-behavior: smooth; }
 .message { max-width: 70%; padding: 8px 10px; border-radius: 10px; position: relative; display: flex; flex-direction: column; gap: 4px; }
 .message .msg-text { word-wrap: break-word; }
 .message .msg-time { font-size: 0.65rem; opacity: 0.7; align-self: flex-end; }
 .sent { background: #4caf50; color: white; margin-left: auto; }
 .received { background: white; border: 1px solid #ccc; margin-right: auto; }
-
-.input-bar {
-  flex: 0 0 auto;
-  position: sticky; /* прилипает к низу контейнера */
-  bottom: 0;
-  background: #fff;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  gap: 8px;
-  border-top: 1px solid #ddd;
-}
+.input-bar { flex: 0 0 auto; position: sticky; bottom: 0; background: #fff; z-index: 5; display: flex; align-items: center; padding: 10px; gap: 8px; border-top: 1px solid #ddd; }
 .input-bar .icon { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
 .input-bar input { flex: 1; padding: 8px 14px; border: 1px solid #ccc; border-radius: 20px; }
-
 .no-selection { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 1rem; color: #666; }
-
-/* Дополнительно: адаптация для очень маленьких экранов */
-@media (max-width: 600px) {
-  .sidebar { width: 220px; }
-  .chat-last { max-width: 100px; }
-}
-
+@media (max-width: 600px) { .sidebar { width: 220px; } .chat-last { max-width: 100px; } }
 .icon-plane { width: 20px; height: 20px; display: block; }
+.analyze-bar { padding: 6px 10px 0 10px; background: #fff; border-top: 1px solid #eee; }
+.analyze-toggle { cursor: pointer; background: #f2f2f2; border: 1px solid #ccc; border-radius: 16px; padding: 6px 14px; font-size: 0.8rem; letter-spacing: .5px; text-transform: uppercase; font-weight: 600; transition: background .15s, border-color .15s, color .15s; }
+.analyze-toggle.active { background: #4caf50; color: #fff; border-color: #4caf50; }
+.analyze-toggle:not(.active):hover { background: #e6e6e6; }
+.chat-header-actions { display: flex; align-items: center; }
+.suggest-btn { background: #1976d2; color: #fff; border: 1px solid #1565c0; border-radius: 18px; padding: 6px 14px; font-size: 0.75rem; font-weight: 600; letter-spacing: .5px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+.suggest-btn:hover:not(:disabled) { background: #1565c0; }
+.suggest-btn:disabled { opacity: 0.6; cursor: default; }
+.suggestions-panel { position: absolute; top: 60px; right: 0; width: 300px; height: calc(100% - 60px); background: #ffffff; border-left: 1px solid #ddd; box-shadow: -2px 0 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; z-index: 20; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #eee; background: #f7f7f7; }
+.panel-header h3 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.close-x { background: none; border: none; font-size: 1.2rem; line-height: 1; cursor: pointer; padding: 4px 8px; }
+.panel-body { padding: 10px 12px; overflow-y: auto; font-size: 0.85rem; line-height: 1.3; flex: 1; }
+.panel-body.state { display: flex; flex-direction: column; gap: 10px; color: #555; font-size: 0.85rem; justify-content: flex-start; }
+.panel-body.state.error { color: #c62828; }
+.retry { align-self: flex-start; background: #c62828; color: #fff; border: none; border-radius: 14px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; }
+.suggestions-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.suggestion-item { border: 1px solid #e2e2e2; background: #fafafa; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.suggestion-text { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; }
+.suggestion-actions { display: flex; justify-content: flex-end; }
+.suggestion-actions button { background: #4caf50; color: #fff; border: none; font-size: 0.7rem; padding: 4px 10px; border-radius: 14px; cursor: pointer; transition: background .15s; }
+.suggestion-actions button:hover { background: #449b48; }
+.slide-left-enter-active, .slide-left-leave-active { transition: transform .25s ease, opacity .25s ease; }
+.slide-left-enter-from, .slide-left-leave-to { transform: translateX(100%); opacity: 0; }
+.hidden-file-input { display: none; }
+.thumbs { display: flex; gap: 6px; max-width: 240px; overflow-x: auto; padding: 2px 4px; }
+.thumb { position: relative; width: 46px; height: 46px; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; flex: 0 0 auto; background: #fff; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb .remove { position: absolute; top: -6px; right: -6px; background: #e53935; color: #fff; border: none; font-size: 0.65rem; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 18px; padding: 0; }
+/* Typing indicator */
+typing-indicator { display: flex; align-items: center; gap: 6px; }
+.dots { display: inline-flex; gap: 4px; }
+.dots span { width: 6px; height: 6px; background: #ccc; border-radius: 50%; display: inline-block; animation: blink 1s infinite ease-in-out; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .2 } 40% { opacity: 1 } }
 
-
-/* Analyze toggle */
-.analyze-bar {
-  padding: 6px 10px 0 10px;
-  background: #fff;
-  border-top: 1px solid #eee;
-}
-.analyze-toggle {
-  cursor: pointer;
-  background: #f2f2f2;
-  border: 1px solid #ccc;
-  border-radius: 16px;
-  padding: 6px 14px;
-  font-size: 0.8rem;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  font-weight: 600;
-  transition: background .15s, border-color .15s, color .15s;
-}
-.analyze-toggle.active {
-  background: #4caf50;
-  color: #fff;
-  border-color: #4caf50;
-}
-.analyze-toggle:not(.active):hover {
-  background: #e6e6e6;
-}
-
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* добавлено для размещения кнопки справа */
-  position: relative;
-}
-
-.chat-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.chat-header-actions {
-  display: flex;
-  align-items: center;
-}
-
-.suggest-btn {
-  background: #1976d2;
-  color: #fff;
-  border: 1px solid #1565c0;
-  border-radius: 18px;
-  padding: 6px 14px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: .5px;
-  cursor: pointer;
-  transition: background .2s, box-shadow .2s;
-}
-.suggest-btn:hover:not(:disabled) {
-  background: #1565c0;
-}
-.suggest-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.suggestions-panel {
-  position: absolute;
-  top: 60px; /* ниже header */
-  right: 0;
-  width: 300px;
-  height: calc(100% - 60px);
-  background: #ffffff;
-  border-left: 1px solid #ddd;
-  box-shadow: -2px 0 6px rgba(0,0,0,0.05);
-  display: flex;
-  flex-direction: column;
-  z-index: 20;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #eee;
-  background: #f7f7f7;
-}
-.panel-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-.close-x {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 8px;
-}
-
-.panel-body {
-  padding: 10px 12px;
-  overflow-y: auto;
-  font-size: 0.85rem;
-  line-height: 1.3;
-  flex: 1;
-}
-
-.panel-body.state {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #555;
-  font-size: 0.85rem;
-  justify-content: flex-start;
-}
-
-.panel-body.state.error {
-  color: #c62828;
-}
-
-.retry {
-  align-self: flex-start;
-  background: #c62828;
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  padding: 4px 10px;
-  cursor: pointer;
-  font-size: 0.7rem;
-}
-
-.suggestions-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.suggestion-item {
-  border: 1px solid #e2e2e2;
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.suggestion-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 0.8rem;
-}
-
-.suggestion-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.suggestion-actions button {
-  background: #4caf50;
-  color: #fff;
-  border: none;
-  font-size: 0.7rem;
-  padding: 4px 10px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: background .15s;
-}
-.suggestion-actions button:hover {
-  background: #449b48;
-}
-
-/* Анимация появления панели */
-.slide-left-enter-active,
-.slide-left-leave-active {
-  transition: transform .25s ease, opacity .25s ease;
-}
-.slide-left-enter-from,
-.slide-left-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-.hidden-file-input {
-  display: none;
-}
-
-.thumbs {
-  display: flex;
-  gap: 6px;
-  max-width: 240px;
-  overflow-x: auto;
-  padding: 2px 4px;
-}
-
-.thumb {
-  position: relative;
-  width: 46px;
-  height: 46px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  overflow: hidden;
-  flex: 0 0 auto;
-  background: #fff;
-}
-
-.thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumb .remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #e53935;
-  color: #fff;
-  border: none;
-  font-size: 0.65rem;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  cursor: pointer;
-  line-height: 18px;
-  padding: 0;
-}
-
+/* Новые стили для изображений сообщений */
+.msg-images { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px; max-width:100%; }
+.msg-image { display:block; width:120px; height:120px; object-fit:cover; border-radius:8px; border:1px solid #ddd; background:#fff; }
+.sent .msg-images .msg-image { border-color: rgba(255,255,255,0.5); }
 </style>
