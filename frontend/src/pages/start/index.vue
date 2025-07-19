@@ -6,7 +6,7 @@
         <button class="hamburger" @click="toggleMenu">☰</button>
         <div class="tabs">
           <button :class="['tab', activeTab === 'chats' && 'active']" @click="activeTab = 'chats'">Чаты</button>
-          <button :class="['tab', activeTab === 'requests' && 'active']" @click="activeTab = 'requests'">Запросы</button>
+            <button :class="['tab', activeTab === 'requests' && 'active']" @click="activeTab = 'requests'">Запросы</button>
         </div>
       </div>
 
@@ -26,7 +26,7 @@
           <div class="chat-info">
             <div class="chat-name">
               {{ chat.name }}
-              <span v-if="chat.is_main" class="badge">MAIN</span>
+              <span v-if="chat.is_main" class="badge">ИИ помощник</span>
             </div>
             <div class="chat-last">{{ lastMessageText(chat) }}</div>
           </div>
@@ -59,6 +59,14 @@
           </div>
         </div>
 
+        <!-- Analyze Toggle (only for mentor chat 'Анализ анкеты') -->
+        <div v-if="selectedChat && selectedChat.is_main === true" class="analyze-bar">
+          <button :class="['analyze-toggle', analyzeMode && 'active']"
+                  @click="toggleAnalyzeMode"
+                  :title="analyzeMode ? 'Режим анализа включён' : 'Нажмите чтобы включить режим анализа'">
+            Анализ анкеты
+          </button>
+        </div>
         <!-- Input Area -->
         <div class="input-bar">
           <button class="icon attach" @click="attach">📎</button>
@@ -68,8 +76,16 @@
             placeholder="Введите сообщение..."
             @keyup.enter="sendMessage"
           />
-          <button class="icon mic" @click="voiceInput">🎤</button>
-          <button class="icon send" @click="sendMessage">✔️</button>
+          <button class="icon send" @click="sendMessage" title="Отправить">
+            <svg class="icon-plane" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 11.5 21 3l-6.5 18-3.5-6-6-3.5Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                    stroke-linecap="round" />
+            </svg>
+          </button>
         </div>
       </div>
       <div v-else class="no-selection">Выберите чат слева</div>
@@ -92,6 +108,7 @@ const loading = ref(false)
 const error = ref('')
 const newMessage = ref('')
 const messagesEl = ref(null)
+const analyzeMode = ref(false) // toggle for special analyze sending
 
 // Fallback avatar (40x40 placeholder)
 const placeholderAvatar = 'https://via.placeholder.com/40'
@@ -166,7 +183,6 @@ async function fetchMessages(chat) {
     await nextTick()
     scrollToBottom()
   } catch (e) {
-    // Локально помечаем ошибку (можно вывести тостером)
     console.error('Ошибка загрузки сообщений', e)
   } finally {
     chat.loading_messages = false
@@ -178,7 +194,6 @@ const currentUserId = ref(null)
 async function fetchCurrentUserId() {
   try {
     const token = getToken()
-    // Подставьте реальный эндпоинт получения текущего пользователя
     // const { data } = await axios.get(`http://${import.meta.env.VITE_BACKEND_URL}:8080/api/v1/user/me`, { headers: { Authorization: `Bearer ${token}` } })
     // currentUserId.value = data.id
   } catch (e) {
@@ -225,7 +240,9 @@ function formatTime(ts) {
 
 function scrollToBottom() {
   if (!messagesEl.value) return
-  messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  requestAnimationFrame(() => {
+    messagesEl.value.scrollTop = messagesEl.value.scrollHeight
+  })
 }
 
 /* =====================
@@ -250,33 +267,38 @@ async function sendMessage() {
 
   try {
     const token = getToken()
+    // Выбор эндпоинта
+    const analyzeEndpoint = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/form`
+    // TODO: Замените на реальный «обычный» эндпоинт (сейчас демонстрационный):
+    const defaultEndpoint = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/send`
+    const endpoint = analyzeMode.value ? analyzeEndpoint : defaultEndpoint
+
     const body = { chat_id: chat.id, text }
-    const { data } = await axios.post(
-      `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/send`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    )
-    // Предполагаем что backend возвращает сохранённое сообщение
+    analyzeMode.value = false
+    const { data } = await axios.post(endpoint, body, { headers: { Authorization: `Bearer ${token}` } })
     optimistic.id = data.id
     optimistic.created_at = data.created_at || optimistic.created_at
     optimistic.pending = false
+
   } catch (e) {
-    // Маркируем ошибку
     optimistic.error = true
     console.error('Не удалось отправить сообщение', e)
   }
 }
 
+function toggleAnalyzeMode() {
+  analyzeMode.value = !analyzeMode.value
+}
+
 function retryMessage(msg) {
   if (!msg.error) return
-  // Можно реализовать повторную отправку
+  // реализовать повторную отправку
 }
 
 /* =====================
  * PLACEHOLDER HANDLERS
  * ===================== */
 function attach() { /* Реализовать прикрепление файлов */ }
-function voiceInput() { /* Реализовать ввод голосом */ }
 function toggleMenu() { /* Реализовать открытие бокового меню */ }
 
 /* =====================
@@ -299,11 +321,13 @@ onMounted(async () => {
   border-right: 1px solid #ddd;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* чтобы список чатов мог скроллиться при необходимости */
 }
 .menu-bar {
   display: flex;
   align-items: center;
   padding: 10px;
+  flex: 0 0 auto;
 }
 .hamburger {
   background: none;
@@ -315,7 +339,7 @@ onMounted(async () => {
 .tab { flex: 1; padding: 8px; border: none; background: none; cursor: pointer; }
 .tab.active { border-bottom: 2px solid #333; }
 .search { margin: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-.chat-list { flex: 1; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
+.chat-list { flex: 1 1 auto; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
 .chat-item { display: flex; align-items: center; padding: 10px; cursor: pointer; transition: background .15s; border-left: 4px solid transparent; }
 .chat-item:hover { background: #f2f2f2; }
 .chat-item.active { background: #e6ffe6; }
@@ -328,17 +352,99 @@ onMounted(async () => {
 .chat-time { font-size: 0.75rem; color: #999; }
 .state-msg { padding: 20px; font-size: 0.9rem; }
 .state-msg.error { color: #c62828; }
-.chat-window { flex: 1; display: flex; flex-direction: column; }
-.chat-header { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #ddd; }
+
+/* ---- Основная область ---- */
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* важно */
+}
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* важно для внутреннего скролла */
+  height: 100%;
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  flex: 0 0 auto;
+  background: #fff;
+  z-index: 6; /* чтобы оставалась над сообщениями при sticky input */
+}
 .avatar-large { width: 50px; height: 50px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
-.messages { flex: 1; padding: 10px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; gap: 8px; }
+
+.messages {
+  flex: 1 1 auto;
+  padding: 10px;
+  overflow-y: auto; /* внутренний скролл */
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0; /* критично */
+  scroll-behavior: smooth;
+}
 .message { max-width: 70%; padding: 8px 10px; border-radius: 10px; position: relative; display: flex; flex-direction: column; gap: 4px; }
 .message .msg-text { word-wrap: break-word; }
 .message .msg-time { font-size: 0.65rem; opacity: 0.7; align-self: flex-end; }
 .sent { background: #4caf50; color: white; margin-left: auto; }
 .received { background: white; border: 1px solid #ccc; margin-right: auto; }
-.input-bar { display: flex; align-items: center; padding: 10px; border-top: 1px solid #ddd; gap: 8px; }
+
+.input-bar {
+  flex: 0 0 auto;
+  position: sticky; /* прилипает к низу контейнера */
+  bottom: 0;
+  background: #fff;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 8px;
+  border-top: 1px solid #ddd;
+}
 .input-bar .icon { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
 .input-bar input { flex: 1; padding: 8px 14px; border: 1px solid #ccc; border-radius: 20px; }
+
 .no-selection { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 1rem; color: #666; }
+
+/* Дополнительно: адаптация для очень маленьких экранов */
+@media (max-width: 600px) {
+  .sidebar { width: 220px; }
+  .chat-last { max-width: 100px; }
+}
+
+.icon-plane { width: 20px; height: 20px; display: block; }
+
+
+/* Analyze toggle */
+.analyze-bar {
+  padding: 6px 10px 0 10px;
+  background: #fff;
+  border-top: 1px solid #eee;
+}
+.analyze-toggle {
+  cursor: pointer;
+  background: #f2f2f2;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.analyze-toggle.active {
+  background: #4caf50;
+  color: #fff;
+  border-color: #4caf50;
+}
+.analyze-toggle:not(.active):hover {
+  background: #e6e6e6;
+}
 </style>

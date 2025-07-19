@@ -29,7 +29,7 @@ api_router = APIRouter(
 async def send_message(message: Annotated[SendMessageForm, Body()],
                        current_user: Annotated[User, Depends(get_current_user)],
                        session: Annotated[AsyncSession, Depends(get_session)]):
-    return await send_message_utils(message, current_user, session)
+    return await send_message_utils(message, current_user, session, 0)
 
 
 @api_router.get('/get_messages_from_chat/{chat_id}',
@@ -43,3 +43,16 @@ async def get_messages_from_chat(current_user: Annotated[User, Depends(get_curre
                                  session: Annotated[AsyncSession, Depends(get_session)],
                                  chat_id: UUID = Path(..., description="Введите ID чата, чтобы получить все сообщения")):
     return await get_messages_from_chat_utils(chat_id, current_user, session)
+
+
+@api_router.post('/form',
+            status_code=status.HTTP_200_OK,
+            responses={
+                     status.HTTP_401_UNAUTHORIZED: {
+                         "descriprion": "Non authorized"
+                     }
+                 })
+async def check_form(message: Annotated[SendMessageForm, Body()],
+               current_user: Annotated[User, Depends(get_current_user)],
+               session: Annotated[AsyncSession, Depends(get_session)]):
+    return await send_message_utils(message, current_user, session, 1)

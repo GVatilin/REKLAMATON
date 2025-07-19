@@ -7,14 +7,17 @@ import datetime
 
 from app.database.models import User, Chat, Message
 from app.schemas import SendMessageForm
-from app.utils.ai_generation import default_ai_answer
+from app.utils.ai_generation import default_ai_answer, form_analyze
 
 import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def send_message_utils(message: SendMessageForm, author: User, session: AsyncSession):
+ai_functions = [default_ai_answer, form_analyze]
+
+
+async def send_message_utils(message: SendMessageForm, author: User, session: AsyncSession, type: int):
     # 1. Достаем всю историю и делаем из неё одну строку
     query = select(Message).where(Message.chat_id == message.chat_id)
     res = await session.scalars(query)
@@ -36,7 +39,7 @@ async def send_message_utils(message: SendMessageForm, author: User, session: As
     await session.commit()
 
     # 2. Запрашиваем ответ у AI
-    ai_response = await default_ai_answer(message.text, history_str)
+    ai_response = await ai_functions[type](message.text, history_str)
     ai_text = ai_response.get("text") if isinstance(ai_response, dict) else str(ai_response)
 
     ai_msg = Message(
@@ -49,7 +52,6 @@ async def send_message_utils(message: SendMessageForm, author: User, session: As
     await session.commit()
 
     return True
-
 
 
 async def get_messages_from_chat_utils(chat_id: UUID, current_user: User, session: AsyncSession):
