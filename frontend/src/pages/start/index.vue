@@ -22,7 +22,7 @@
           :class="{ active: selectedChat && selectedChat.id === chat.id, main: chat.is_main }"
           @click="openChat(chat)"
         >
-          <img class="avatar" :src="chat.avatar || placeholderAvatar" :alt="chat.name" />
+          <img class="avatar" src="./mentor.png" :alt="chat.name" />
           <div class="chat-info">
             <div class="chat-name">
               {{ chat.name }}
@@ -43,7 +43,7 @@
         <!-- Chat Header -->
         <div class="chat-header">
           <div class="chat-header-left">
-            <img class="avatar-large" :src="selectedChat.avatar || placeholderAvatar" :alt="selectedChat.name" />
+            <img class="avatar-large" src="./mentor.png" :alt="selectedChat.name" />
             <h2>{{ selectedChat.name }}</h2>
           </div>
 
@@ -115,34 +115,67 @@
           </div>
         </div>
 
-        <!-- Analyze Toggle (only for mentor chat 'Анализ анкеты') -->
         <div v-if="selectedChat && selectedChat.is_main === true" class="analyze-bar">
           <button :class="['analyze-toggle', analyzeMode && 'active']"
                   @click="toggleAnalyzeMode"
-                  :title="analyzeMode ? 'Режим анализа включён' : 'Нажмите чтобы включить режим анализа'">
+                  :title="analyzeMode ? 'Режим анализа анкеты включён' : 'Нажмите чтобы включить режим анализа анкеты'">
             Анализ анкеты
+          </button>
+
+          <button :class="['analyze-toggle', photoFeedbackMode && 'active']"
+                  @click="togglePhotoFeedbackMode"
+                  :title="photoFeedbackMode ? 'Режим отзыва о фото включён' : 'Нажмите чтобы отправить фото на отзыв'">
+            Отзыв о фото
           </button>
         </div>
         <!-- Input Area -->
         <div class="input-bar">
-          <button class="icon attach" @click="attach">📎</button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            class="hidden-file-input"
+            @change="onImageSelected"
+          />
+
+
+          <button class="icon attach" @click="triggerFileSelect" title="Прикрепить изображение">
+            📎
+          </button>
+
+          <div v-if="attachedImages.length" class="thumbs">
+            <div
+              v-for="(img, idx) in attachedImages"
+              :key="img.id"
+              class="thumb"
+              :title="img.file.name"
+            >
+              <img :src="img.preview" alt="preview" />
+              <button class="remove" @click="removeImage(idx)" title="Удалить">×</button>
+            </div>
+          </div>
+
           <input
             type="text"
             v-model="newMessage"
             placeholder="Введите сообщение..."
             @keyup.enter="sendMessage"
           />
+
           <button class="icon send" @click="sendMessage" title="Отправить">
             <svg class="icon-plane" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 11.5 21 3l-6.5 18-3.5-6-6-3.5Z"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linejoin="round"
-                    stroke-linecap="round" />
+              <path
+                d="M3 11.5 21 3l-6.5 18-3.5-6-6-3.5Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </div>
+
       </div>
       <div v-else class="no-selection">Выберите чат слева</div>
     </main>
@@ -164,10 +197,9 @@ const loading = ref(false)
 const error = ref('')
 const newMessage = ref('')
 const messagesEl = ref(null)
-const analyzeMode = ref(false) // toggle for special analyze sending
 
 // Fallback avatar (40x40 placeholder)
-const placeholderAvatar = 'https://via.placeholder.com/40'
+const placeholderAvatar = './mentor.png'
 
 /* ====== SUGGESTIONS STATE ====== */
 const suggestionsPanelOpen = ref(false)
@@ -175,8 +207,60 @@ const suggestionsLoading = ref(false)
 const suggestionsError = ref('')
 const suggestionsList = ref([])
 
+const analyzeMode = ref(false)
+const photoFeedbackMode = ref(false) // Новый режим отправки фото на /photo
+
 // Кэш по chat.id, чтобы не перезагружать без необходимости
 const suggestionsCache = new Map()
+const fileInput = ref(null)
+const attachedImages = ref([]) 
+
+function insertSuggestion(s) {
+  // Вставим текст предложения в поле ввода (не сразу отправляем — пользователь может отредактировать)
+  const txt = s.text || s.message || (typeof s === 'string' ? s : '')
+  if (!txt) return
+  if (newMessage.value) {
+    newMessage.value = newMessage.value.trimEnd() + (newMessage.value.endsWith(' ') ? '' : ' ') + txt
+  } else {
+    newMessage.value = txt
+  }
+  // Фокус на input — через nextTick если нужно
+  requestAnimationFrame(() => {
+    // Можно поймать сам input через querySelector либо ref, если заведёте ref
+  })
+}
+
+function triggerFileSelect() {
+  if (!fileInput.value) return
+  fileInput.value.click()
+}
+
+function onImageSelected(e) {
+  const files = Array.from(e.target.files || [])
+  // Фильтруем только изображения
+  const images = files.filter(f => f.type.startsWith('image/'))
+  images.forEach(f => {
+    attachedImages.value.push({
+      id: `${Date.now()}-${Math.random()}`,
+      file: f,
+      preview: URL.createObjectURL(f),
+    })
+  })
+  // Сброс, чтобы одно и то же имя можно было выбрать снова
+  e.target.value = ''
+}
+
+function removeImage(index) {
+  const [removed] = attachedImages.value.splice(index, 1)
+  if (removed && removed.preview) {
+    URL.revokeObjectURL(removed.preview)
+  }
+}
+
+function clearAttachedImages() {
+  attachedImages.value.forEach(i => i.preview && URL.revokeObjectURL(i.preview))
+  attachedImages.value = []
+}
 
 function toggleSuggestionsPanel() {
   if (!selectedChat.value) return
@@ -364,14 +448,20 @@ function scrollToBottom() {
 async function sendMessage() {
   const text = newMessage.value.trim()
   const chat = selectedChat.value
-  if (!text || !chat) return
+  const hasImages = attachedImages.value.length > 0
 
+  if (!chat) return
+  if (!text && !hasImages) return // ничего не отправлять, если пусто всё
+
+  // Оптимистичное сообщение (показываем, что ушло)
   const optimistic = {
     local_id: Date.now(),
-    text,
+    text: text || (hasImages ? '[Изображение]' : ''),
     created_at: new Date().toISOString(),
     is_user: true,
     pending: true,
+    has_images: hasImages,
+    images_count: attachedImages.value.length
   }
   chat.messages.push(optimistic)
   newMessage.value = ''
@@ -380,26 +470,72 @@ async function sendMessage() {
 
   try {
     const token = getToken()
-
-    // Новая логика выбора эндпоинта:
     const base = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message`
     let endpoint
-    if (chat.is_main) {
-      // Мейн-чат: обычная отправка -> /send, режим анализа -> /form
-      endpoint = analyzeMode.value ? `${base}/form` : `${base}/send`
-    } else {
-      // Обычный (партнёрский) чат всегда -> /send_partner
-      endpoint = `${base}/send_partner`
+    let payload
+    let config = {
+      headers: { Authorization: `Bearer ${token}` }
     }
 
-    const body = { chat_id: chat.id, text }
+    const mainChat = chat.is_main === true
 
-    // Сбросим режим анализа после отправки
-    if (analyzeMode.value) analyzeMode.value = false
+    // Валидация для режима "Отзыв о фото"
+if (photoFeedbackMode.value && !hasImages) {
+  // Помечаем оптимистичное сообщение ошибкой и выходим
+  optimistic.error = true
+  optimistic.text = 'Для "Отзыв о фото" нужно прикрепить хотя бы одно изображение.'
+  return
+}
 
-    const { data } = await axios.post(endpoint, body, {
-      headers: { Authorization: `Bearer ${token}` },
+if (mainChat) {
+  if (photoFeedbackMode.value && hasImages) {
+    endpoint = `${base}/photo`
+    payload = new FormData()
+    if (text) payload.append('text', text)
+
+    attachedImages.value.forEach(({ file }) => {
+      payload.append('image', file)
     })
+
+  } else if (hasImages) {
+    // Обычная отправка изображения(ий) в главный чат
+    endpoint = `${base}/chat_with_screenshot`
+    payload = new FormData()
+    payload.append('chat_id', chat.id)
+
+    if (text) payload.append('text', text)
+
+    if (attachedImages.value.length === 1) {
+      payload.append('image', attachedImages.value[0].file)
+    } else {
+      attachedImages.value.forEach(fObj => {
+        payload.append('images[]', fObj.file)
+      })
+    }
+
+    config.headers['Content-Type'] = 'multipart/form-data'
+  } else {
+    // Текстовые ветки главного чата
+    if (analyzeMode.value) {
+      endpoint = `${base}/form`
+    } else {
+      endpoint = `${base}/send`
+    }
+    payload = { chat_id: chat.id, text }
+  }
+} else {
+  // Неглавные чаты
+  endpoint = `${base}/send_partner`
+  payload = { chat_id: chat.id, text }
+}
+
+
+    // После отправки режима анализа не держим
+    if (analyzeMode.value) analyzeMode.value = false
+    if (photoFeedbackMode.value) photoFeedbackMode.value = false
+
+
+    const { data } = await axios.post(endpoint, payload, config)
 
     optimistic.id = data.id
     optimistic.created_at = data.created_at || optimistic.created_at
@@ -407,12 +543,28 @@ async function sendMessage() {
   } catch (e) {
     optimistic.error = true
     console.error('Не удалось отправить сообщение', e)
+  } finally {
+    if (hasImages) {
+      clearAttachedImages()
+    }
   }
 }
 
 
 function toggleAnalyzeMode() {
+  // Если включаем анализ – выключаем отзыв о фото
+  if (!analyzeMode.value) {
+    photoFeedbackMode.value = false
+  }
   analyzeMode.value = !analyzeMode.value
+}
+
+function togglePhotoFeedbackMode() {
+  // Если включаем отзыв о фото – выключаем анализ
+  if (!photoFeedbackMode.value) {
+    analyzeMode.value = false
+  }
+  photoFeedbackMode.value = !photoFeedbackMode.value
 }
 
 function retryMessage(msg) {
@@ -732,6 +884,51 @@ onMounted(async () => {
 .slide-left-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.thumbs {
+  display: flex;
+  gap: 6px;
+  max-width: 240px;
+  overflow-x: auto;
+  padding: 2px 4px;
+}
+
+.thumb {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  background: #fff;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb .remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #e53935;
+  color: #fff;
+  border: none;
+  font-size: 0.65rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 18px;
+  padding: 0;
 }
 
 </style>

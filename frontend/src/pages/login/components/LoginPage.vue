@@ -42,11 +42,6 @@ async function loginUserWrap() {
     isLoading.value = false
 }
 
-async function googleLogin() {
-    const authUrl = `http://${process.env.VUE_APP_DNS_URL}/api/v1/auth/google/login`
-    window.location.href = authUrl;
-}
-
 function clearFields() {
     username.value = ""
     email.value = ""

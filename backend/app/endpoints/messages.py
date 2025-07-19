@@ -3,6 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Optional
 from uuid import UUID
+import datetime
 
 
 from app.schemas import SendMessageForm
@@ -15,7 +16,7 @@ from app.utils.messages import (
 )
 from app.utils.image import default_ai_answer_with_ocr
 from app.database.models import Message
-
+from app.utils.img import call_llm_image_bytes
 
 api_router = APIRouter(
     prefix="/message",
@@ -112,11 +113,16 @@ async def chat_with_screenshot(
     )
 
     image_bytes: Optional[bytes] = None
-    if image:
-        # Проверка расширения / MIME
-        if image.content_type not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
-            raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла")
-        image_bytes = await image.read()
+    image_bytes = await image.read()
+
+    usr_msg = Message(
+            chat_id=chat_id,
+            text=text,
+            is_user=True,
+            date=datetime.datetime.now()
+            )
+    session.add(usr_msg)
+    await session.commit()
 
     try:
         answer_payload = await default_ai_answer_with_ocr(
@@ -124,6 +130,16 @@ async def chat_with_screenshot(
             history=history_str,
             screenshot=image_bytes  # передаём байты
         )
+        
+        ai_msg = Message(
+            chat_id=chat_id,
+            text=answer_payload["text"],
+            is_user=False,
+            date=datetime.datetime.now()
+            )
+        session.add(ai_msg)
+        await session.commit()
+        
         # answer_payload, судя по вашему коду, возвращает уже JSON (dict) из модели
         return {
             "success": True,
@@ -134,3 +150,51 @@ async def chat_with_screenshot(
             "success": False,
             "error": str(e)
         }
+    
+
+@api_router.post(
+    "/photo",
+    summary="Отправить сообщение и необязательный скриншот; получить AI ответ с OCR",
+    status_code=status.HTTP_200_OK
+)
+async def check_photo(
+    text: str = Form(...),
+    chat_id: UUID = Form(...),
+    image: Optional[UploadFile] = File(None, description="Изображение/скриншот"),
+    current_user: "User" = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    usr_msg = Message(
+            chat_id=chat_id,
+            text=text,
+            is_user=True,
+            date=datetime.datetime.now()
+            )
+    session.add(usr_msg)
+    await session.commit()
+
+    # Читаем содержимое асинхронно
+    content: Optional[bytes] = None
+    content = await image.read()
+
+    # Проверки (опционально)
+    if len(content) == 0:
+        return {"error": "Пустой файл."}
+    if image.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        return {"error": f"Неподдерживаемый тип: {image.content_type}"}
+
+    # Вызов синхронной функции в отдельном потоке (если SDK блокирует)
+    from fastapi.concurrency import run_in_threadpool
+    result = await run_in_threadpool(call_llm_image_bytes, content, filename=image.filename)
+
+    ai_msg = Message(
+            chat_id=chat_id,
+            text=result,
+            is_user=False,
+            date=datetime.datetime.now()
+            )
+    session.add(ai_msg)
+    await session.commit()
+
+    return {"chat_id": str(chat_id), "answer": result}
+

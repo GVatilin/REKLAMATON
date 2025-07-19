@@ -4,6 +4,10 @@ from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 import io
 from pathlib import Path
+from app.utils.ai_config import ai_url, get_headers, payload_default
+from app.config import get_settings
+import aiohttp
+import json
 
 
 class SimpleOCR:
@@ -180,12 +184,6 @@ async def default_ai_answer_with_ocr(
     history: list,
     screenshot: Optional[Union[bytes, str, Path]] = None
 ):
-    """Обновленная версия вашей функции с поддержкой OCR"""
-    from app.utils.ai_config import ai_url, get_headers, payload_default
-    from app.config import get_settings
-    import aiohttp
-    import json
-    
     # Дополняем сообщение текстом со скриншота
     enhanced_text = await add_screenshot_to_message(text, screenshot)
     
@@ -203,3 +201,4 @@ async def default_ai_answer_with_ocr(
                 return json.loads(ai_response_text)
             else:
                 return f"check_error, status: {resp.status}"
+
