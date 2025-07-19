@@ -42,9 +42,65 @@
       <div v-if="selectedChat" class="chat-container">
         <!-- Chat Header -->
         <div class="chat-header">
-          <img class="avatar-large" :src="selectedChat.avatar || placeholderAvatar" :alt="selectedChat.name" />
-          <h2>{{ selectedChat.name }}</h2>
+          <div class="chat-header-left">
+            <img class="avatar-large" :src="selectedChat.avatar || placeholderAvatar" :alt="selectedChat.name" />
+            <h2>{{ selectedChat.name }}</h2>
+          </div>
+
+          <!-- Кнопка подсказок только для НЕ-мейн чатов -->
+          <div v-if="selectedChat && !selectedChat.is_main" class="chat-header-actions">
+            <button
+              class="suggest-btn"
+              :disabled="suggestionsLoading"
+              @click="toggleSuggestionsPanel"
+              :title="suggestionsPanelOpen ? 'Скрыть предложения' : 'Получить предложения сообщений'"
+            >
+              <span v-if="!suggestionsLoading">
+                {{ suggestionsPanelOpen ? 'Скрыть' : 'Предложить сообщения' }}
+              </span>
+              <span v-else>Загрузка…</span>
+            </button>
+          </div>
         </div>
+
+        <!-- Панель предложений (справа) -->
+        <transition name="slide-left">
+          <aside
+            v-if="suggestionsPanelOpen"
+            class="suggestions-panel"
+          >
+            <div class="panel-header">
+              <h3>Предложения</h3>
+              <button class="close-x" @click="toggleSuggestionsPanel" title="Закрыть">×</button>
+            </div>
+
+            <div class="panel-body" v-if="!suggestionsLoading && !suggestionsError && suggestionsList.length">
+              <ul class="suggestions-list">
+                <li
+                  v-for="(s, i) in suggestionsList"
+                  :key="s.id || i"
+                  class="suggestion-item"
+                >
+                  <div class="suggestion-text">{{ s.text || s.message || s }}</div>
+                  <div class="suggestion-actions">
+                    <button @click="insertSuggestion(s)">Вставить</button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="panel-body state" v-else-if="suggestionsLoading">
+              Загрузка предложений...
+            </div>
+            <div class="panel-body state error" v-else-if="suggestionsError">
+              {{ suggestionsError }}
+              <button class="retry" @click="fetchSuggestions(selectedChat)">Повторить</button>
+            </div>
+            <div class="panel-body state" v-else>
+              Нет предложений
+            </div>
+          </aside>
+        </transition>
 
         <!-- Messages -->
         <div class="messages" ref="messagesEl">
@@ -112,6 +168,80 @@ const analyzeMode = ref(false) // toggle for special analyze sending
 
 // Fallback avatar (40x40 placeholder)
 const placeholderAvatar = 'https://via.placeholder.com/40'
+
+/* ====== SUGGESTIONS STATE ====== */
+const suggestionsPanelOpen = ref(false)
+const suggestionsLoading = ref(false)
+const suggestionsError = ref('')
+const suggestionsList = ref([])
+
+// Кэш по chat.id, чтобы не перезагружать без необходимости
+const suggestionsCache = new Map()
+
+function toggleSuggestionsPanel() {
+  if (!selectedChat.value) return
+  // Если открываем – и нет кэша или кэш пустой — загрузим
+  if (!suggestionsPanelOpen.value) {
+    openSuggestionsFor(selectedChat.value)
+  } else {
+    suggestionsPanelOpen.value = false
+  }
+}
+
+function openSuggestionsFor(chat) {
+  suggestionsPanelOpen.value = true
+  if (suggestionsCache.has(chat.id)) {
+    suggestionsList.value = suggestionsCache.get(chat.id)
+    return
+  }
+  fetchSuggestions(chat)
+}
+
+async function fetchSuggestions(chat) {
+  if (!chat) return
+  suggestionsLoading.value = true
+  suggestionsError.value = ''
+  suggestionsList.value = []
+  try {
+    const token = getToken()
+    const { data } = await axios.get(
+      `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/chat_analysis/${chat.id}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+
+    const normalized = Array.isArray(data)
+      ? data.map(item => {
+          if (typeof item === 'string') return { text: item }
+          if (item && typeof item === 'object') {
+            // поддерживаем варианты ключей
+            return { id: item.id, text: item.text || item.message || JSON.stringify(item) }
+          }
+          return { text: String(item) }
+        })
+      : []
+    suggestionsList.value = normalized
+    suggestionsCache.set(chat.id, normalized)
+  } catch (e) {
+    suggestionsError.value = e?.response?.data?.message || e.message || 'Не удалось получить предложения'
+  } finally {
+    suggestionsLoading.value = false
+  }
+}
+
+function insertSuggestion(s) {
+  // Вставим текст предложения в поле ввода (не сразу отправляем — пользователь может отредактировать)
+  const txt = s.text || s.message || (typeof s === 'string' ? s : '')
+  if (!txt) return
+  if (newMessage.value) {
+    newMessage.value = newMessage.value.trimEnd() + (newMessage.value.endsWith(' ') ? '' : ' ') + txt
+  } else {
+    newMessage.value = txt
+  }
+  // Фокус на input — через nextTick если нужно
+  requestAnimationFrame(() => {
+    // Можно поймать сам input через querySelector либо ref, если заведёте ref
+  })
+}
 
 const getToken = () => {
   const token = localStorage.getItem('chronoJWTToken')
@@ -215,6 +345,7 @@ const visibleChats = computed(() => {
  * ===================== */
 async function openChat(chat) {
   selectedChat.value = chat
+  suggestionsPanelOpen.value = false // закрываем при смене
   await fetchMessages(chat)
 }
 
@@ -245,9 +376,6 @@ function scrollToBottom() {
   })
 }
 
-/* =====================
- * SENDING MESSAGE (пример локально + POST)
- * ===================== */
 async function sendMessage() {
   const text = newMessage.value.trim()
   const chat = selectedChat.value
@@ -267,24 +395,36 @@ async function sendMessage() {
 
   try {
     const token = getToken()
-    // Выбор эндпоинта
-    const analyzeEndpoint = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/form`
-    // TODO: Замените на реальный «обычный» эндпоинт (сейчас демонстрационный):
-    const defaultEndpoint = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message/send`
-    const endpoint = analyzeMode.value ? analyzeEndpoint : defaultEndpoint
+
+    // Новая логика выбора эндпоинта:
+    const base = `http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/message`
+    let endpoint
+    if (chat.is_main) {
+      // Мейн-чат: обычная отправка -> /send, режим анализа -> /form
+      endpoint = analyzeMode.value ? `${base}/form` : `${base}/send`
+    } else {
+      // Обычный (партнёрский) чат всегда -> /send_partner
+      endpoint = `${base}/send_partner`
+    }
 
     const body = { chat_id: chat.id, text }
-    analyzeMode.value = false
-    const { data } = await axios.post(endpoint, body, { headers: { Authorization: `Bearer ${token}` } })
+
+    // Сбросим режим анализа после отправки
+    if (analyzeMode.value) analyzeMode.value = false
+
+    const { data } = await axios.post(endpoint, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
     optimistic.id = data.id
     optimistic.created_at = data.created_at || optimistic.created_at
     optimistic.pending = false
-
   } catch (e) {
     optimistic.error = true
     console.error('Не удалось отправить сообщение', e)
   }
 }
+
 
 function toggleAnalyzeMode() {
   analyzeMode.value = !analyzeMode.value
@@ -447,4 +587,166 @@ onMounted(async () => {
 .analyze-toggle:not(.active):hover {
   background: #e6e6e6;
 }
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* добавлено для размещения кнопки справа */
+  position: relative;
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.suggest-btn {
+  background: #1976d2;
+  color: #fff;
+  border: 1px solid #1565c0;
+  border-radius: 18px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: background .2s, box-shadow .2s;
+}
+.suggest-btn:hover:not(:disabled) {
+  background: #1565c0;
+}
+.suggest-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.suggestions-panel {
+  position: absolute;
+  top: 60px; /* ниже header */
+  right: 0;
+  width: 300px;
+  height: calc(100% - 60px);
+  background: #ffffff;
+  border-left: 1px solid #ddd;
+  box-shadow: -2px 0 6px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+  background: #f7f7f7;
+}
+.panel-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.close-x {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.panel-body {
+  padding: 10px 12px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.panel-body.state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #555;
+  font-size: 0.85rem;
+  justify-content: flex-start;
+}
+
+.panel-body.state.error {
+  color: #c62828;
+}
+
+.retry {
+  align-self: flex-start;
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-item {
+  border: 1px solid #e2e2e2;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.suggestion-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+}
+
+.suggestion-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.suggestion-actions button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.suggestion-actions button:hover {
+  background: #449b48;
+}
+
+/* Анимация появления панели */
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: transform .25s ease, opacity .25s ease;
+}
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
 </style>
