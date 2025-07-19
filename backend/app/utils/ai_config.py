@@ -1,7 +1,6 @@
 from uuid import uuid4
 from pathlib import Path
 from typing import Optional, Union
-from app.utils.image import OCRProcessor
 
 
 ai_url = "https://api.deepseek.com/chat/completions"

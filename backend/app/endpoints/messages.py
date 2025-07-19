@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Body, Path
+from fastapi import APIRouter, Depends, status, HTTPException, Body, Path, Form, UploadFile, File
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
+from typing import Annotated, Optional
 from uuid import UUID
 
 
@@ -13,6 +13,9 @@ from app.utils.messages import (
     get_messages_from_chat_utils,
     chat_analysis_utils,
 )
+from app.utils.image import default_ai_answer_with_ocr
+from app.database.models import Message
+
 
 api_router = APIRouter(
     prefix="/message",
@@ -83,3 +86,51 @@ async def chat_analysis(current_user: Annotated[User, Depends(get_current_user)]
                         session: Annotated[AsyncSession, Depends(get_session)],
                         chat_id: UUID = Path(..., description="Введите ID чата, чтобы получить помощь с сообщениями")):
     return await chat_analysis_utils(current_user, session, chat_id)
+
+
+@api_router.post(
+    "/chat_with_screenshot",
+    summary="Отправить сообщение и необязательный скриншот; получить AI ответ с OCR",
+    status_code=status.HTTP_200_OK
+)
+async def chat_with_screenshot(
+    text: str = Form(...),
+    chat_id: UUID = Form(...),
+    image: Optional[UploadFile] = File(None, description="Изображение/скриншот"),
+    current_user: "User" = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    
+    query = select(Message).where(Message.chat_id == chat_id)
+    res = await session.scalars(query)
+    history = res.all()
+
+    history_str = "\n".join(
+        f'Сообщение пользователя: "{m.text}"' if m.is_user
+        else f'Сообщение помощника: {m.text}'
+        for m in history
+    )
+
+    image_bytes: Optional[bytes] = None
+    if image:
+        # Проверка расширения / MIME
+        if image.content_type not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+            raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла")
+        image_bytes = await image.read()
+
+    try:
+        answer_payload = await default_ai_answer_with_ocr(
+            text=text,
+            history=history_str,
+            screenshot=image_bytes  # передаём байты
+        )
+        # answer_payload, судя по вашему коду, возвращает уже JSON (dict) из модели
+        return {
+            "success": True,
+            "data": answer_payload
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }

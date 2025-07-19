@@ -12,7 +12,6 @@ from app.utils.chats import (
     create_chat_utils,
     get_user_chats_utils,
 )
-from app.utils.ai_generation import analyze_chat_screenshot
 
 
 api_router = APIRouter(
