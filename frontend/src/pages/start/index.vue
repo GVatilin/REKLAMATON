@@ -228,21 +228,6 @@ async function fetchSuggestions(chat) {
   }
 }
 
-function insertSuggestion(s) {
-  // Вставим текст предложения в поле ввода (не сразу отправляем — пользователь может отредактировать)
-  const txt = s.text || s.message || (typeof s === 'string' ? s : '')
-  if (!txt) return
-  if (newMessage.value) {
-    newMessage.value = newMessage.value.trimEnd() + (newMessage.value.endsWith(' ') ? '' : ' ') + txt
-  } else {
-    newMessage.value = txt
-  }
-  // Фокус на input — через nextTick если нужно
-  requestAnimationFrame(() => {
-    // Можно поймать сам input через querySelector либо ref, если заведёте ref
-  })
-}
-
 const getToken = () => {
   const token = localStorage.getItem('chronoJWTToken')
   if (!token) throw new Error('Token is missing. Please log in.')

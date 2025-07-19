@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, UUID, func, DateTime
+from sqlalchemy import Column, String, Boolean, UUID, func, DateTime, Integer
 
 from app.database import DeclarativeBase
 import uuid
@@ -17,3 +17,10 @@ class User(DeclarativeBase):
     email = Column(String, unique=True)
     premium = Column(Boolean, default=False)
     password = Column(String)
+
+    name = Column(String)
+    age = Column(Integer)
+    about = Column(String)
+    hobby = Column(String)
+    goals = Column(Integer)
+    person_type = Column(Integer)

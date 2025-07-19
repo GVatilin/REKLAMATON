@@ -1,14 +1,20 @@
 import axios from "axios"
 
-export async function registerUser(email, username, password) {
-    if (!username || !email || !password) {
+export async function registerUser(email, username, password, name, age, about, hobby, goals, person_type) {
+    if (!username || !email || !password || !name || !age) {
         return "Все поля должны быть заполнены"
     }
     try {
         await axios.post(`http://${process.env.VUE_APP_BACKEND_URL}:8080/api/v1/user/register`, {
             email: email,
             username: username,
-            password: password
+            password: password,
+            name: name,
+            age: age,
+            about: about,
+            hobby: hobby,
+            goals: goals,
+            person_type: person_type
         }, {
             headers: {
                 "Accept": "application/json",

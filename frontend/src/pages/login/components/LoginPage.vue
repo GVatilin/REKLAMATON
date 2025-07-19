@@ -15,9 +15,16 @@ const password = ref("")
 const response = ref("")
 const isLoading = ref(false)
 
+const name = ref("")
+const age = ref(-1)
+const about = ref("")
+const hobby = ref("")
+const goals = ref(-1)
+const person_type = ref(-1)
+
 async function registerUserWrap() {
     isLoading.value = true
-    response.value = await registerUser(email.value, username.value, password.value)
+    response.value = await registerUser(email.value, username.value, password.value, name.value, age.value, about.value, hobby.value, goals.value, person_type.value)
     if (response.value === "") {
         await loginUserWrap()
     }
@@ -29,7 +36,7 @@ async function loginUserWrap() {
     response.value = await loginUser(email.value, password.value)
     if (response.value === "") {
         router.push({
-            name: "Profile Page"
+            name: "Welcome"
         })
     }
     isLoading.value = false
@@ -64,8 +71,8 @@ onMounted(() => {
         <div class="login-main">
             <div class="container">
                 <div class="welcome-text">
-                    <h1>Добро пожаловать в <span class="chrono">Chrono!</span></h1>
-                    <h2>Каждый миг на счету - планируй с умом, <br> а мы поможем!</h2>
+                    <h1>Прокачай свои навыки знакомств с<span class="chrono">ИИ-ментором</span></h1>
+                    <h2>Персонализированные советы, анализ переписки<br>и помощь в создании привлекательного профиля</h2>
                     <p class="error-msg" style="text-align: left;">{{ response }}</p>
                 </div>
 
@@ -97,13 +104,6 @@ onMounted(() => {
                             @click="registration = (registration + 1) % 2"
                         >
                             Еще нет аккаунта (зарегистрироваться)
-                        </div>
-                        <div
-                            class="bottom-text"
-                            style="margin-top: 2%;"
-                            @click="googleLogin"
-                        >
-                            Войти через <b>Google</b>
                         </div>
                     </div>
                 </transition>

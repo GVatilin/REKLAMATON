@@ -3,7 +3,8 @@ import aiohttp
 import json
 from sqlalchemy.future import select 
 from uuid import UUID
-
+from typing import Optional, Union
+from pathlib import Path
 
 from app.utils.ai_config import (
     ai_url,
@@ -110,3 +111,4 @@ async def chat_analysis_ai_functions(history):
                 return ai_response
             else:
                 return f"check_error, status: {resp.status}"
+            
